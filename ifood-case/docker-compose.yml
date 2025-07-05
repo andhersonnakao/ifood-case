@@ -1,0 +1,69 @@
+version: '3.8'
+services:
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master 
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8083
+    ports:
+      - "7077:7077"   # Spark master port (for cluster jobs)
+      - "8083:8083"   # Spark master web UI
+    volumes:
+      - .:/app/stream_data
+
+  spark-worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: spark-worker-1
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_WEBUI_PORT=8081
+    ports:
+      - "8081:8081"   # Spark worker 1 web UI
+    volumes:
+      - .:/app/stream_data
+
+
+  spark-worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: spark-worker-2
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_WEBUI_PORT=8082
+    ports:
+      - "8082:8082"   # Spark worker 2 web UI
+    volumes:
+      - .:/app/stream_data
+
+  jupyter:
+    build: .
+    container_name: spark-jupyter
+    depends_on:
+      - spark-master
+    ports:
+      - "8888:8888"   # Jupyter Notebook
+    environment:
+      - JUPYTER_TOKEN=mysecuretoken
+      - PYTHONPATH=/app/stream_data
+    working_dir: /app/stream_data/notebooks
+    user: root
+    volumes:
+      - .:/app/stream_data
